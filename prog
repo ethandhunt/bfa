@@ -1,0 +1,37 @@
+segment .text
+global _start
+_start:
+	push rbp
+	mov rbp, rsp
+	sub rsp, 1024
+;	-- READ STDIN --
+mov eax, DWORD [rbp-4]
+	lea rsi, DWORD [rbp-1024+rax]
+	mov rax, 0
+	mov rdi, 0
+	mov rdx, 1
+	syscall
+;	-- LOOP START --
+.loop_start_1:
+	mov edx, DWORD [rbp-4]
+	movzx eax, BYTE [rbp-1024+rdx]
+	cmp eax, 0
+	jz .loop_end_1
+;	-- READ STDIN --
+mov eax, DWORD [rbp-4]
+	lea rsi, DWORD [rbp-1024+rax]
+	mov rax, 0
+	mov rdi, 0
+	mov rdx, 1
+	syscall
+;	-- SUB --
+	mov edx, DWORD [rbp-4]
+	movzx eax, BYTE [rbp-1024+rdx]
+	sub eax, 10
+	mov BYTE [rbp-1024+rdx], al
+;	-- LOOP END --
+	jmp .loop_start_1
+.loop_end_1:
+	mov rax, 60
+	mov rdi, 0
+	syscall

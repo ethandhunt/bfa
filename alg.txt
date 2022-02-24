@@ -1,0 +1,54 @@
+(y) = (x! == 0):
+    vars: x(?), y!(?)
+    
+    bfpsuedo:
+        |y = 0 {y[-]}
+        |y += 1 (y:1) {y[+]}
+        !goto x
+        [
+            !goto y
+            |y -= 1 (y:0) {-}
+            !goto x
+            |x = 0 {[-]}
+        ]
+        @x
+
+    bfvar:
+        y[-]+
+        x[
+            y-
+            x[-]
+        ]
+
+(y) = (x! != 0):
+    vars: x(?), y!(?)
+
+    bfpsuedo:
+        |y = 0 {y[-]}
+        !goto x
+        [
+            !goto y
+            |y += 1 (y:1) {+}
+            !goto x
+            |x = 0 {[-]}
+        ]
+        @x
+
+    bfvar:
+        y[-]
+        x[
+            y+
+            x[-]
+        ]
+
+printAsm:
+    asm:
+        push    $0x21       # '!'
+        mov     $1, %rax    # sys_write call number 
+        mov     $1, %rdi    # write to stdout (fd=1)
+        mov     %rsp, %rsi  # use char on stack
+        mov     $1, %rdx    # write 1 char
+        syscall   
+        add     $8, %rsp    # restore sp 
+
+    can change `mov %rsp, %rsi` to not use stack
