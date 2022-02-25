@@ -10,25 +10,24 @@ Similar to a state machine
 
 Examples
 ```
-LAYOUT
-a char
-b array char 3
-c short
+H+72
+E+69
+L+76
+O+79
+W+87
+R+82
+D+68
+SPACE+32
 
-%INCLUDE a_file
-
-DECLARETEMP 4 // the size of temp
-
-EXTEND.CONST char max
-VALUE 255
-
-EXTEND.MACRO short add @ $
-PARAMS self value
-TEMPALLOC 1
-// Affects cmp result
-TEMPCOMPARE 0 self[0] char.max
-
-
-STATE 1
+H.
+E.
+L.
+L.
+O.
+SPACE.
+W.
+O.
+R.
+L.
+D.
 ```
-incomplete
