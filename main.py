@@ -31,7 +31,7 @@ def compileBf(inFP, outFP, mode='classic'):
     tape should be fine up to 1024 cells
 
     assembly memory layout:
-    pointer: DWORD rbp - 4
+    pointer: DWORD [rbp - 4]
 
     '''
     if mode == 'classic':
@@ -54,12 +54,11 @@ def compileBf(inFP, outFP, mode='classic'):
         readSTDIN = (
                 ';\t-- READ STDIN --\n'
                 'mov eax, DWORD [rbp-4]\n'
-                '\tlea rsi, DWORD [rbp-1024+rax]\n'
+                '\tlea rsi, [rbp-1024+rax]\n'
                 '\tmov rax, 0\n'
                 '\tmov rdi, 0\n'
                 '\tmov rdx, 1\n'
                 '\tsyscall\n'
-                #'\tmov BYTE [rbp-1024+rdx], al\n'
         )
 
         writeSTDOUT = (
@@ -190,6 +189,11 @@ def compileBf(inFP, outFP, mode='classic'):
             print(f'{ansi.bright.green}Done{ansi.reset}')
 
 
+class compileBFA:
+    def _0(inFP, outFP):
+        pass
+
+
 def main():
     def subcommand(name, args=[]):
         result = f'\t\t{ansi.bright.magenta+ansi.bold}{name}{ansi.reset} '
@@ -240,7 +244,7 @@ def main():
             f'{ansi.bright.yellow + ansi.bold}Usage{ansi.reset}: python3 {ansi.bright.green}main.py{ansi.reset} <{ansi.bright.cyan + ansi.bold}subcommand{ansi.reset}> <{ansi.bright.cyan + ansi.bold}args{ansi.reset}>\n'
             f'\t{ansi.bright.cyan}subcommands{ansi.reset}:')
         print(subcommand('compile', ['inFile.bf', 'outFile.asm?x']))
-        print(subcommand('assemble', ['inFile.bfAsm', 'outFile.bf']))
+        print(subcommand('assemble', ['bfa Version', 'inFile.bfa?', 'outFile.bf']))
         print(subcommand('flags', []))
         exit(1)
 
