@@ -4,9 +4,14 @@ low level language that compiles to brainfuck, also compiles that brainfuck into
 ### Progress
 - [x] Compile raw bf to nasm elf64 assembly
 - [ ] Compile assembly into elf64 executables natively (within main.py)
+- [ ] Get .bf extension working
+- [ ] Get .bf files self hosted
+
+### .bf Extension
+- `!` open new file descriptor, file path in `[pointer+1:NULL]`, `int fd` returned in `[pointer]`, mode in `[pointer]`
+- `x` execute another file, same as above
 
 ### .bfa0 Syntax Planning 
-Similar to a state machine
 
 Examples
 ```
