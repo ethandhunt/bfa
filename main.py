@@ -28,10 +28,10 @@ class ansi:
 
 def compileBf(inFP, outFP, mode='classic'):
     '''
-    tape should be fine up to 1024 cells
+    tape is allocated 32768 (2**15) bytes
 
     assembly memory layout:
-    pointer: DWORD [rbp - 4]
+    pointer: r11
 
     '''
     if mode == 'classic':
@@ -42,10 +42,12 @@ def compileBf(inFP, outFP, mode='classic'):
                 '_start:\n'
                 '\tpush rbp\n'
                 '\tmov rbp, rsp\n'
-                '\tsub rsp, 1024\n'
+                '\tsub rsp, 32768\n'
+                '\tmov r11, 0\n'
         )
 
         end = (
+                ';\t-- EXIT --\n'
                 '\tmov rax, 60\n'
                 '\tmov rdi, 0\n'
                 '\tsyscall\n'
@@ -53,24 +55,24 @@ def compileBf(inFP, outFP, mode='classic'):
 
         readSTDIN = (
                 ';\t-- READ STDIN --\n'
-                'mov eax, DWORD [rbp-4]\n'
-                '\tlea rsi, [rbp-1024+rax]\n'
                 '\tmov rax, 0\n'
                 '\tmov rdi, 0\n'
+                '\tpush r11\n' # ???
+                '\tlea rsi, [rbp-32768+r11]\n'
                 '\tmov rdx, 1\n'
                 '\tsyscall\n'
+                '\tpop r11\n' # ???
         )
 
         writeSTDOUT = (
                 ';\t-- WRITE STDOUT --\n'
-                '\tmov edx, DWORD [rbp-4]\n' # get pointer
                 '\tmov rax, 1\n'
                 '\tmov rdi, 0\n'
-                '\tmov rsi, rbp\n'
-                '\tsub rsi, 1024\n'
-                '\tadd rsi, rdx\n'
+                '\tpush r11\n' # ???
+                '\tlea rsi, [rbp-32768+r11]\n'
                 '\tmov rdx, 1\n'
                 '\tsyscall\n'
+                '\tpop r11\n' # ???
         )
 
         with open(inFP, 'r') as f:
@@ -99,32 +101,26 @@ def compileBf(inFP, outFP, mode='classic'):
         for c in processed:
             if c[0] == '>':
                 compiled += (
-                        ';\t -- INC POINTER --\n'
-                       f'\tadd DWORD [rbp-4], {len(c)}\n'
+                        ';\t-- INC POINTER --\n'
+                       f'\tadd r11, {len(c)}\n'
                 )
 
             elif c[0] == '<':
                 compiled += (
-                        ';\t -- DEC POINTER --\n'
-                       f'\tsub DWORD [rbp-4], {len(c)}\n'
+                        ';\t-- DEC POINTER --\n'
+                       f'\tsub r11, {len(c)}\n'
                 )
 
             elif c[0] == '+':
                 compiled += (
                         ';\t-- ADD --\n'
-                        '\tmov edx, DWORD [rbp-4]\n' # get pointer
-                        '\tmovzx eax, BYTE [rbp-1024+rdx]\n'
-                       f'\tadd eax, {len(c)}\n'
-                        '\tmov BYTE [rbp-1024+rdx], al\n'
+                       f'\tadd BYTE [rbp-32768+r11], {len(c)}\n'
                 )
 
             elif c[0] == '-':
                 compiled += (
                         ';\t-- SUB --\n'
-                        '\tmov edx, DWORD [rbp-4]\n' # get pointer
-                        '\tmovzx eax, BYTE [rbp-1024+rdx]\n'
-                       f'\tsub eax, {len(c)}\n'
-                        '\tmov BYTE [rbp-1024+rdx], al\n'
+                       f'\tsub BYTE [rbp-32768+r11], {len(c)}\n'
                 )
 
             elif c == '.':
@@ -162,9 +158,8 @@ def compileBf(inFP, outFP, mode='classic'):
                 compiled += (
                         ';\t-- LOOP START --\n'
                        f'.loop_start_{addr}:\n'
-                        '\tmov edx, DWORD [rbp-4]\n' # get pointer
-                        '\tmovzx eax, BYTE [rbp-1024+rdx]\n'
-                        '\tcmp eax, 0\n'
+                        '\tmovzx rax, BYTE [rbp-32768+r11]\n'
+                        '\tcmp rax, 0\n'
                        f'\tjz .loop_end_{addr}\n'
                 )
 
@@ -181,11 +176,12 @@ def compileBf(inFP, outFP, mode='classic'):
             f.write(compiled)
 
     if 'x' in flags or 'executable' in flags:
-        subprocess.run(['nasm', '-f', 'elf64', '-o', outFP+'.o', outFP])
-        subprocess.run(['ld', '-o', outFP+'.x', outFP+'.o'])
+        subprocess.run(['mv', outFP, outFP+'.asm'])
+        subprocess.run(['nasm', '-f', 'elf64', '-o', outFP+'.o', outFP+'.asm'])
+        subprocess.run(['ld', '-o', outFP, outFP+'.o'])
         if 'r' in flags or 'run' in flags:
-            print(f'{ansi.bright.green}Executing {outFP+".x"}{ansi.reset}')
-            subprocess.run(['./'+outFP+'.x'])
+            print(f'{ansi.bright.green}Executing {outFP}{ansi.reset}')
+            subprocess.run(['./'+outFP])
             print(f'{ansi.bright.green}Done{ansi.reset}')
 
 
@@ -219,7 +215,7 @@ def main():
         return result.replace('?', f'{ansi.bright.magenta}?{ansi.bright.green}')
     
     def flagUsage(name, description):
-        return f'\t{ansi.bright.cyan + ansi.bold}{name}{ansi.reset} - {ansi.bright.green}{description}{ansi.reset}'
+        return f'\t{ansi.bright.cyan + ansi.bold}{name}{ansi.reset}\t- {ansi.bright.green}{description}{ansi.reset}'
 
 
     global flags, argv
@@ -259,14 +255,23 @@ def main():
 
         case 'assemble':
             if len(args) != 2:
-                print(subcommandUsage('assemble', ['inFile.bfAsm', 'outFile.bf']))
+                print(subcommandUsage('assemble', ['bfa Version', 'inFile.bfa?', 'outFile.bf']))
                 exit(1)
+
+            if args[0] == 'bfa0':
+                compileBFA._0(args[1], args[2])
+
+            else:
+                print(f'{ansi.bright.yellow + ansi.bold}Error{ansi.reset}: Unknown bfa version {ansi.bright.cyan + ansi.bold}{args[0]}{ansi.reset}')
+                exit(1)
+
         
         case 'flags':
             print(f'{ansi.bright.yellow + ansi.bold}Flags{ansi.reset}:')
             print(flagUsage('--verbose', 'print verbose info'))
             print(flagUsage('-x --executable', 'generate executable instead of assemebly file with the compile subcommand'))
             print(flagUsage('-r --run', 'run the executable after compilation'))
+            print(flagUsage('-e --extended', 'use extended brainfuck'))
             exit(1)
 
 if __name__ == "__main__":
