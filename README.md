@@ -5,7 +5,7 @@ low level language that compiles to brainfuck, also compiles that brainfuck into
 - [x] Compile raw bf to nasm elf64 assembly
 - [ ] Compile assembly into elf64 executables natively (within main.py)
 - [ ] Get .bf extension working
-- [ ] Get .bf files self hosted
+- [ ] Self host brainfuck
 
 ### .bf Extension
 - `!` open new file descriptor, file path in `[pointer+1:NULL]`, `int fd` returned in `[pointer]`, mode in `[pointer]`
