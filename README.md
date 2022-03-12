@@ -11,9 +11,9 @@ low level language that compiles to brainfuck, also compiles that brainfuck into
 - `!` open new file descriptor, file path in `[pointer+1:NULL]`, `int fd` returned in `[pointer]`, mode in `[pointer]`
 - `x` execute another file, same as above
 
-### .bfa0 Syntax Planning 
+### .bfa0
 
-Examples
+`HELLO WORLD`
 ```
 _72 {+}72
 {H + _72 -}_72 // using a cell reference (acts as while loop, better to make memory safe loops explicit then need to look through each loop to check for non-memory safe behavior) instead of an integer literal

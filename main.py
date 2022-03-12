@@ -1,6 +1,8 @@
 #!/bin/python3.10
 import sys
 import subprocess
+import re
+import string
 
 class ansi:
     black = '\033[30m'
@@ -26,7 +28,7 @@ class ansi:
     reset = '\033[0m'
 
 
-def compileBf(inFP, outFP, mode='classic'):
+def compileBf(inFP, outFP, extend=False):
     '''
     tape is allocated 32768 (2**15) bytes
 
@@ -34,8 +36,51 @@ def compileBf(inFP, outFP, mode='classic'):
     pointer: r11
 
     '''
-    if mode == 'classic':
-        # classic brainfuck
+    if extend:
+        start = (
+                'segment .text\n'
+                'global _start\n'
+                '_start:\n'
+                '\tpush rbp\n'
+                '\tmov rbp, rsp\n'
+                '\tsub rsp, 32768\n'
+                '\tmov r11, 0\n'
+        )
+
+        end = (
+                ';\t-- EXIT --\n'
+                '\tmov rax, 60\n'
+                '\tmov rdi, 0\n'
+                '\tsyscall\n'
+        )
+
+        readFD = (
+                ';\t-- READ FD --\n'
+                '\tmov rax, 0\n'
+                '\tpush r11\n' # ???
+                '\tmovzx rdi, BYTE [rbp-32768+r11]\n'
+                '\tpop r11\n' # ???
+                '\tpush r11\n' # ???
+                '\tlea rsi, [rbp-32768+r11+1]\n'
+                '\tmov rdx, 1\n'
+                '\tsyscall\n'
+                '\tpop r11\n' # ???
+        )
+
+        # TODO: not done writeFD
+        writeFD = (
+                ';\t-- WRITE FD --\n'
+                '\tmov rax, 1\n'
+                '\tmov rdi, 0\n'
+                '\tpush r11\n' # ???
+                '\tlea rsi, [rbp-32768+r11]\n'
+                '\tmov rdx, 1\n'
+                '\tsyscall\n'
+                '\tpop r11\n' # ???
+        )
+
+
+    else:
         start = (
                 'segment .text\n'
                 'global _start\n'
@@ -142,7 +187,7 @@ def compileBf(inFP, outFP, mode='classic'):
                     elif x == ']':
                         depth += 1
                     addr -= 1
-                
+
                 if 'verbose' in flags:
                     print(f'ret_to {addr}')
                 compiled += (
@@ -187,7 +232,139 @@ def compileBf(inFP, outFP, mode='classic'):
 
 class compileBFA:
     def _0(inFP, outFP):
-        pass
+        '''
+        takes a .bfa0 file and compiles (transpiles?) it to a .bf file
+        '''
+
+        with open(inFP, 'r') as f:
+            code = f.read()
+
+        # remove comments and newlines
+        code = re.sub(r'(\/\*([^*]|(\*+[^*\/]))*\*+\/)|(\/\/.*)', '', code, re.MULTILINE).replace('\n', '')
+        for char in string.whitespace:
+            code = code.replace(char, '')
+
+        bfchar = '+-<>[],.'
+        if 'e' in flags or 'extended' in flags:
+            bfchar += '!x'
+
+        # Tokenise code
+        # syntax:
+        #   Comments: '//' ... '\n' || '/*' ... '*/'
+        #   Repeats: '{' {bfchar} '}' {{int}* || {CellRef}}
+        #   Cell Referencing: {!bfchar && !int}*
+        #   BF Instruction: {bfchar}
+
+
+        # hacky
+        def recursiveClean(code):
+            print(f'{ansi.bright.yellow}recursiveClean({ansi.bright.green}{repr(code)}{ansi.bright.yellow}){ansi.reset}')
+            if code.count('{') != code.count('}'):
+                print(f'{ansi.dark.red}[ERROR]{ansi.reset} Number of opening brackets ({code.count("{")}) does not match number of closing brackets ({code.count("}")})')
+                exit(1)
+            tokens = []
+            last = ''
+            n = 0
+            depth = 0
+            while n < len(code):
+                if code[n] == '{':
+                    if depth == 0 and last != '':
+                        if last[0] not in (bfchar + string.digits):
+                            tokens.append( ('goto', last) )
+                        last = ''
+
+                    depth += 1
+
+                elif code[n] == '}':
+                    depth -= 1
+                    if depth == 0:
+                        recursiveLast = recursiveClean(last)
+                        last = ''
+                        n += 1
+                        if code[n].isdigit():
+                            repeatNum = ''
+                            while code[n].isdigit() and n < len(code):
+                                repeatNum += code[n]
+                                n += 1
+                                if n == len(code):
+                                    break
+
+                            repeatNum = int(repeatNum)
+                            print(f'{ansi.bright.yellow}repeatNum: {ansi.bright.green}{repr(repeatNum)}{ansi.reset}')
+                            n -= 1
+                            tokens += recursiveLast * repeatNum # += intentionally
+                            tokens.append( ('bf', ' ') )
+
+                        elif code[n] not in (bfchar + string.digits + '{' + '}'):
+                            cellRef = ''
+                            while code[n] not in (bfchar + string.digits + '{' + '}'):
+                                cellRef += code[n]
+                                n += 1
+                                if n == len(code):
+                                    break
+                            n -= 1
+
+                            print(f'{ansi.bright.yellow}cellRef: {ansi.bright.green}{repr(cellRef)}{ansi.reset}')
+
+                            tokens.append( ('goto', cellRef) )
+                            tokens.append( ('bf', '[') )
+                            tokens += recursiveLast # += intentionally
+                            tokens.append( ('goto', cellRef) )
+                            tokens.append( ('bf', ']') )
+                            tokens.append( ('bf', ' ') )
+
+                elif depth != 0:
+                    last += code[n]
+                
+                elif code[n] not in (bfchar + string.digits):
+                    last += code[n]
+
+                elif code[n] in bfchar:
+                    if last != '':
+                        if last[0] not in (bfchar + string.digits):
+                            tokens.append( ('goto', last) )
+                        last = ''
+
+                    tokens.append( ('bf', code[n]) )
+
+                n += 1
+                if 'v' in flags or 'verbose' in flags:
+                    print(f'{ansi.bright.yellow}last: {ansi.bright.green}{repr(last)}{ansi.reset}')
+
+            return tokens
+
+        tokens = recursiveClean(code)
+        if 'v' in flags or 'verbose' in flags:
+            print(f'{ansi.bright.yellow}Tokens: {ansi.bright.green}{repr(tokens)}{ansi.reset}')
+
+        cellRefs = {} # dict
+        cellPtr = 0
+        for ins in tokens:
+            primary = ins[0]
+            arg = ins[1]
+
+            if primary == 'goto' and arg not in cellRefs:
+                cellRefs[arg] = cellPtr
+                cellPtr += 1
+
+        print(f'{ansi.bright.yellow}cellRefs: {ansi.bright.green}{repr(cellRefs)}{ansi.reset}')
+
+        cellPtr = 0
+        compiled = ''
+        for ins in tokens:
+            primary = ins[0]
+            arg = ins[1]
+
+            if primary == 'goto':
+                compiled += '<' * -(cellRefs[arg]-cellPtr) + '>' * (cellRefs[arg]-cellPtr)
+                cellPtr = cellRefs[arg]
+
+            elif primary == 'bf':
+                compiled += arg
+        print(f'{ansi.bright.yellow}compiled: {ansi.bright.green}{repr(compiled)}{ansi.reset}')
+
+        with open(outFP, 'w') as f:
+            f.write(compiled)
 
 
 def main():
@@ -213,7 +390,7 @@ def main():
                 result += f'<{ansi.bright.cyan + ansi.bold}{"".join(arg.split(".")[:-1])}{ansi.reset}{ansi.bright.green}.{arg.split(".")[-1]}{ansi.reset}> '
 
         return result.replace('?', f'{ansi.bright.magenta}?{ansi.bright.green}')
-    
+
     def flagUsage(name, description):
         return f'\t{ansi.bright.cyan + ansi.bold}{name}{ansi.reset}\t- {ansi.bright.green}{description}{ansi.reset}'
 
@@ -237,7 +414,7 @@ def main():
 
     if len(argv) < 1:
         print(
-            f'{ansi.bright.yellow + ansi.bold}Usage{ansi.reset}: python3 {ansi.bright.green}main.py{ansi.reset} <{ansi.bright.cyan + ansi.bold}subcommand{ansi.reset}> <{ansi.bright.cyan + ansi.bold}args{ansi.reset}>\n'
+            f'{ansi.bright.yellow + ansi.bold}Usage{ansi.reset}:\tpython3 {ansi.bright.green}main.py{ansi.reset} <{ansi.bright.cyan + ansi.bold}subcommand{ansi.reset}> <{ansi.bright.cyan + ansi.bold}args{ansi.reset}>\n'
             f'\t{ansi.bright.cyan}subcommands{ansi.reset}:')
         print(subcommand('compile', ['inFile.bf', 'outFile.asm?x']))
         print(subcommand('assemble', ['bfa Version', 'inFile.bfa?', 'outFile.bf']))
@@ -251,10 +428,10 @@ def main():
             if len(args) != 2:
                 print(subcommandUsage('compile', ['inFile.bf', 'outFile.asm?x']))
                 exit(1)
-            compileBf(args[0], args[1])
+            compileBf(args[0], args[1], True if 'e' in flags or 'extended' in flags else False)
 
         case 'assemble':
-            if len(args) != 2:
+            if len(args) != 3:
                 print(subcommandUsage('assemble', ['bfa Version', 'inFile.bfa?', 'outFile.bf']))
                 exit(1)
 
@@ -265,11 +442,11 @@ def main():
                 print(f'{ansi.bright.yellow + ansi.bold}Error{ansi.reset}: Unknown bfa version {ansi.bright.cyan + ansi.bold}{args[0]}{ansi.reset}')
                 exit(1)
 
-        
+
         case 'flags':
             print(f'{ansi.bright.yellow + ansi.bold}Flags{ansi.reset}:')
             print(flagUsage('--verbose', 'print verbose info'))
-            print(flagUsage('-x --executable', 'generate executable instead of assemebly file with the compile subcommand'))
+            print(flagUsage('-x --executable', 'generate executable instead of assembly file with the compile subcommand'))
             print(flagUsage('-r --run', 'run the executable after compilation'))
             print(flagUsage('-e --extended', 'use extended brainfuck'))
             exit(1)
