@@ -342,11 +342,9 @@ class compileBFA:
             # remove redundant goto's
             if token[0] == 'goto':
                 if currentGoto == token[1]:
-                    print(' ', repr(currentGoto), repr(token[1]))
                     continue
 
                 else:
-                    print('e', repr(currentGoto), repr(token[1]))
                     currentGoto = token[1]
                     newTokens.append(token)
 
