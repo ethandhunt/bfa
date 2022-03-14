@@ -269,8 +269,8 @@ class compileBFA:
             while n < len(code):
                 if code[n] == '{':
                     if depth == 0 and last != '':
-                        if last[0] not in (bfchar + string.digits):
-                            tokens.append( ('goto', last) )
+                        # TODO: more testing
+                        tokens.append( ('goto', last) )
                         last = ''
 
                     depth += 1
@@ -295,9 +295,9 @@ class compileBFA:
                             tokens += recursiveLast * repeatNum # += intentionally
                             tokens.append( ('bf', ' ') )
 
-                        elif code[n] not in (bfchar + string.digits + '{' + '}'):
+                        elif code[n] not in (bfchar + '{' + '}'):
                             cellRef = ''
-                            while code[n] not in (bfchar + string.digits + '{' + '}'):
+                            while code[n] not in (bfchar + '{' + '}'):
                                 cellRef += code[n]
                                 n += 1
                                 if n == len(code):
@@ -316,13 +316,13 @@ class compileBFA:
                 elif depth != 0:
                     last += code[n]
                 
-                elif code[n] not in (bfchar + string.digits):
+                elif code[n] not in (bfchar):
                     last += code[n]
 
                 elif code[n] in bfchar:
                     if last != '':
-                        if last[0] not in (bfchar + string.digits):
-                            tokens.append( ('goto', last) )
+                        # TODO: more testing
+                        tokens.append( ('goto', last) ) # might raise problems
                         last = ''
 
                     tokens.append( ('bf', code[n]) )
@@ -335,7 +335,9 @@ class compileBFA:
 
         tokens = recursiveClean(code)
         if 'v' in flags or 'verbose' in flags:
-            print(f'{ansi.bright.yellow}Tokens: {ansi.bright.green}{repr(tokens)}{ansi.reset}')
+            print(f'{ansi.bright.yellow}Tokens:{ansi.reset}')
+            for i, token in enumerate(tokens):
+                print(f'{ansi.bright.yellow}<TOKEN [{i}]> {ansi.bright.green}{repr(token)}{ansi.reset}')
 
         cellRefs = {} # dict
         cellPtr = 0

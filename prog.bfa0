@@ -1,5 +1,5 @@
-seventy_two {+} 72
-{ - H + } seventy_two // using a cell reference (acts as while loop, better to make memory safe loops explicit then need to look through each loop to check for non-memory safe behavior) instead of an integer literal
+_72 {+} 72
+{ - H + } _72 // using a cell reference (acts as while loop, better to make memory safe loops explicit then need to look through each loop to check for non-memory safe behavior) instead of an integer literal
 { E +} 69
 { L +} 76
 { O +} 79
