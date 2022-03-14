@@ -334,10 +334,52 @@ class compileBFA:
             return tokens
 
         tokens = recursiveClean(code)
+
+        # clean tokens
+        newTokens = []
+        currentGoto = ''
+        for token in tokens:
+            # remove redundant goto's
+            if token[0] == 'goto':
+                if currentGoto == token[1]:
+                    print(' ', repr(currentGoto), repr(token[1]))
+                    continue
+
+                else:
+                    print('e', repr(currentGoto), repr(token[1]))
+                    currentGoto = token[1]
+                    newTokens.append(token)
+
+            elif token[0] == 'bf':
+                newTokens.append(token)
+
+            else:
+                print(f'{ansi.bright.red}[ERROR]{ansi.reset} Unknown token type: {token[0]}')
+                exit(1)
+
+        tokens = newTokens
+
         if 'v' in flags or 'verbose' in flags:
             print(f'{ansi.bright.yellow}Tokens:{ansi.reset}')
+            lastBF = ''
+            lastBFIndex = 0
             for i, token in enumerate(tokens):
-                print(f'{ansi.bright.yellow}<TOKEN [{i}]> {ansi.bright.green}{repr(token)}{ansi.reset}')
+                if token[0] == 'goto':
+                    if lastBF != '':
+                        if lastBFIndex != i-1:
+                            print(f'{ansi.bright.yellow}<TOKEN [{lastBFIndex:03}:{i-1:03}]\t{ansi.bright.green}(\'bf\', {lastBF})')
+
+                        else:
+                            print(f'{ansi.bright.yellow}<TOKEN [{i-1}]\t\t{ansi.bright.green}(\'bf\', {lastBF})')
+
+                        lastBF = ''
+                    print(f'{ansi.bright.yellow}<TOKEN [{i}]>\t\t{ansi.bright.green}{repr(token)}{ansi.reset}')
+
+                if token[0] == 'bf':
+                    if lastBF == '':
+                        lastBFIndex = i
+
+                    lastBF += token[1]
 
         cellRefs = {} # dict
         cellPtr = 0
@@ -434,15 +476,22 @@ def main():
 
         case 'assemble':
             if len(args) != 3:
-                print(subcommandUsage('assemble', ['bfa Version', 'inFile.bfa?', 'outFile.bf']))
+                print(subcommandUsage('assemble', ['bfa Version (\'.\' for file autodetect)', 'inFile.bfa?', 'outFile.bf']))
                 exit(1)
 
-            if args[0] == 'bfa0':
-                compileBFA._0(args[1], args[2])
+            bfaVersion = args[0]
+
+            if args[0] == '.':
+                bfaVersion = args[1].split('.')[-1]
+
+            if bfaVersion == 'bfa0':
+                f = compileBFA._0
 
             else:
                 print(f'{ansi.bright.yellow + ansi.bold}Error{ansi.reset}: Unknown bfa version {ansi.bright.cyan + ansi.bold}{args[0]}{ansi.reset}')
                 exit(1)
+
+            f(*args[1:])
 
 
         case 'flags':
