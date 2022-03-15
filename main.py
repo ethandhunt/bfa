@@ -273,6 +273,9 @@ class compileBFA:
                         tokens.append( ('goto', last) )
                         last = ''
 
+                    if depth != 0:
+                        last += code[n]
+
                     depth += 1
 
                 elif code[n] == '}':
@@ -312,6 +315,9 @@ class compileBFA:
                             tokens.append( ('goto', cellRef) )
                             tokens.append( ('bf', ']') )
                             tokens.append( ('bf', ' ') )
+
+                    else:
+                        last += code[n]
 
                 elif depth != 0:
                     last += code[n]
@@ -398,7 +404,7 @@ class compileBFA:
             arg = ins[1]
 
             if primary == 'goto':
-                compiled += '<' * -(cellRefs[arg]-cellPtr) + '>' * (cellRefs[arg]-cellPtr)
+                compiled += '<' * -(cellRefs[arg]-cellPtr) + '>' * (cellRefs[arg]-cellPtr) + ' '
                 cellPtr = cellRefs[arg]
 
             elif primary == 'bf':

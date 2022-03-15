@@ -1,11 +1,12 @@
-_72 {+} 72
-{ - H + } _72 // using a cell reference (acts as while loop, better to make memory safe loops explicit then need to look through each loop to check for non-memory safe behavior) instead of an integer literal
-{ E +} 69
-{ L +} 76
-{ O +} 79
-{ W +} 87
-{ R +} 82
-{ D +} 68
+_7 {+} 7
+{ - {H +} 10 } _7
+{ H + } 2
+{ E + } 69
+{ L + } 76
+{ O + } 79
+{ W + } 87
+{ R + } 82
+{ D + } 68
 { SPACE + } 32
 
 /*
