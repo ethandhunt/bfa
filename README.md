@@ -11,6 +11,7 @@ low level language that compiles to brainfuck, also compiles that brainfuck into
 - [ ] Self host brainfuck
 
 ### .bf Extension
+#### !!! Not Complete
 - `!` open new file descriptor, file path in `[pointer+1:NULL]`, `int fd` returned in `[pointer]`, mode in `[pointer]`
 - `x` execute another file, same as above
 
