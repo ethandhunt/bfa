@@ -1,6 +1,9 @@
 # bfa
 low level language that compiles to brainfuck, also compiles that brainfuck into assembly
 
+## Quick Start
+- Main program is `main.py` - has usage info when run with `./main.py` or `python3 main.py`
+
 ### Progress
 - [x] Compile raw bf to nasm elf64 assembly
 - [ ] Compile assembly into elf64 executables natively (within main.py)
