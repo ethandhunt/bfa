@@ -41,8 +41,88 @@
             x[-]
         ]
 
+Memory Safe If Elif Else Statement:
+
+    pointer annotated:
+        (1 means outside loop, 2 means inside loop)
+        {if} {elif} {elif} {elif} {255} {1}
+        1^
+
+        [
+            if_code
+            [-]
+            +[->+]- (at 255)
+            > - (set last cell {1} to 0)
+            < (goto {255})
+        ]
+
+        {if} {elif} {elif} {elif} {255} {1}
+        1^                        2^
+
+        +[->+]- (at 255)
+
+        {if} {elif} {elif} {elif} {255} {1}
+                                1&2^
+
+        > [
+            <<<< [
+                {if} {elif} {elif} {elif} {255} {1}
+                     2^                         1^
+
+                elif_code
+                [-]
+                +[->+]- (at 255)
+                > - (set last cell {1} to 0)
+                <
+            ]
+        ]
+        +[->+]- (goto {255})
+        {if} {elif} {elif} {elif} {255} {1}
+                                1&2^
+
+        > [
+            <<< [
+                {if} {elif} {elif} {elif} {255} {1}
+                            2^                  1^
+
+                elif_code
+                [-]
+                +[->+]- (at 255)
+                > - (set last cell {1} to 0)
+            ]
+        ]
+        +[->+]- (goto {255})
+        {if} {elif} {elif} {elif} {255} {1}
+                                1&2^
+
+        > [
+            << [
+                {if} {elif} {elif} {elif} {255} {1}
+                                   2^           1^
+
+                elif_code
+                [-]
+                +[->+]- (at 255)
+                > - (set last cell {1} to 0)
+                <
+            ]
+        ]
+        +[->+]- (goto 255)
+
+        > [
+            else_code
+            [-]
+        ]
+
+        {if} {elif} {elif} {elif} {255} {1}
+                                        1^
+
+
+
+    
+
 printAsm:
-    asm:
+    asm (not nasm):
         push    $0x21       # '!'
         mov     $1, %rax    # sys_write call number 
         mov     $1, %rdi    # write to stdout (fd=1)
