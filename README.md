@@ -1,6 +1,13 @@
 # bfa
 low level language that compiles to brainfuck, also compiles that brainfuck into assembly
 
+### Development in this repo has stopped
+I tried to expand it too far from the original plan and it all fell apart
+
+I'm starting a new project in https://github.com/ethandhunt/bfb
+
+It will be less ambitious and have the ability to be built upon later
+
 ## Quick Start
 - Main program is `main.py` - has usage info when run with `./main.py` or `python3 main.py`
 
